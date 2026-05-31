@@ -69,6 +69,9 @@ jobs:
           rewritten = []
 
           for line in lines:
+              if "=" not in line or line.lstrip().startswith("#"):
+                  rewritten.append(line)
+                  continue
               key = line.split("=", 1)[0].strip()
               if key in updates:
                   rewritten.append(f"{key}={updates[key]}")
@@ -102,7 +105,7 @@ jobs:
         run: |
           cd iosApp/build/Build/Products/Release-iphoneos
           if [ ! -d Nuvio.app ]; then
-            echo "Expected iosApp/build/Build/Products/Release-iphoneos/Nuvio.app was not produced by xcodebuild. Check the xcodebuild logs above for compilation or linker errors."
+            echo "Expected iosApp/build/Build/Products/Release-iphoneos/Nuvio.app was not produced by xcodebuild. Check the 'Build iOS App via Xcode' step logs in this run (expand the step output) for compilation or linker errors."
             exit 1
           fi
           APP_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Nuvio.app/Info.plist)

@@ -6,14 +6,13 @@ on:
     branches:
       - cmp-rewrite
 
+permissions:
+  contents: read
+
 jobs:
   build-ios-full:
     name: Build iOS Full Version
     runs-on: macos-latest
-    env:
-      GRADLE_OPTS: -Dorg.gradle.workers.max=2
-      JAVA_TOOL_OPTIONS: -Xmx10g
-      KOTLIN_DAEMON_JVMARGS: -Xmx6144m
     steps:
       - name: Checkout Repository & Submodules
         uses: actions/checkout@v4
@@ -79,7 +78,10 @@ jobs:
       - name: Package App into .ipa
         run: |
           cd iosApp/build/Build/Products/Release-iphoneos
-          test -d Nuvio.app
+          if [ ! -d Nuvio.app ]; then
+            echo "Expected iosApp/build/Build/Products/Release-iphoneos/Nuvio.app was not produced by xcodebuild."
+            exit 1
+          fi
           APP_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Nuvio.app/Info.plist)
           mkdir Payload
           mv Nuvio.app Payload/

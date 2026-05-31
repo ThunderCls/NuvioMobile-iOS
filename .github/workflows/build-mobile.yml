@@ -53,12 +53,35 @@ jobs:
 
       - name: Tune Kotlin memory for CI iOS build
         run: |
-          {
-            echo 'kotlin.daemon.jvmargs=-Xmx6144M'
-            echo 'kotlin.native.jvmArgs=-Xmx10240M'
-            echo 'org.gradle.jvmargs=-Xmx10240M -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=1536m'
-            echo 'org.gradle.workers.max=2'
-          } >> gradle.properties
+          python3 - << 'PY'
+          from pathlib import Path
+
+          path = Path("gradle.properties")
+          updates = {
+              "kotlin.daemon.jvmargs": "-Xmx6144M",
+              "kotlin.native.jvmArgs": "-Xmx10240M",
+              "org.gradle.jvmargs": "-Xmx10240M -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=1536m",
+              "org.gradle.workers.max": "2",
+          }
+
+          lines = path.read_text(encoding="utf-8").splitlines()
+          seen = set()
+          rewritten = []
+
+          for line in lines:
+              key = line.split("=", 1)[0].strip()
+              if key in updates:
+                  rewritten.append(f"{key}={updates[key]}")
+                  seen.add(key)
+              else:
+                  rewritten.append(line)
+
+          for key, value in updates.items():
+              if key not in seen:
+                  rewritten.append(f"{key}={value}")
+
+          path.write_text("\n".join(rewritten) + "\n", encoding="utf-8")
+          PY
 
       - name: Build iOS App via Xcode
         run: |
@@ -79,7 +102,7 @@ jobs:
         run: |
           cd iosApp/build/Build/Products/Release-iphoneos
           if [ ! -d Nuvio.app ]; then
-            echo "Expected iosApp/build/Build/Products/Release-iphoneos/Nuvio.app was not produced by xcodebuild."
+            echo "Expected iosApp/build/Build/Products/Release-iphoneos/Nuvio.app was not produced by xcodebuild. Check the xcodebuild logs above for compilation or linker errors."
             exit 1
           fi
           APP_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Nuvio.app/Info.plist)
